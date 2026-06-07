@@ -4,6 +4,7 @@ import {
   passengerDensity, customers, gifts, messages, reports,
   generateId, zones, workers, shops
 } from '../data/mockData';
+import type { OperationReport } from '/shared/types';
 
 const router = Router();
 
@@ -132,6 +133,19 @@ router.post('/points/redeem', async (req: AuthRequest, res: Response): Promise<v
   customer.availablePoints -= gift.pointsRequired;
   gift.stock -= 1;
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u5',
+    recipientName: '陈总',
+    type: 'points',
+    title: `积分兑换通知 - ${customer.name}`,
+    content: `${customer.name}使用${gift.pointsRequired}积分兑换了${gift.name}，剩余积分：${customer.availablePoints}。`,
+    relatedId: customerId,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   res.json({
     success: true,
     message: `成功兑换${gift.name}`,
@@ -158,6 +172,19 @@ router.post('/points/parking', async (req: AuthRequest, res: Response): Promise<
   
   customer.availablePoints -= pointsRequired;
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u5',
+    recipientName: '陈总',
+    type: 'points',
+    title: `停车费抵扣通知 - ${customer.name}`,
+    content: `${customer.name}使用${pointsRequired}积分抵扣${hours}小时停车费，剩余积分：${customer.availablePoints}。`,
+    relatedId: customerId,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   res.json({
     success: true,
     message: `成功抵扣${hours}小时停车费`,
@@ -170,6 +197,7 @@ router.post('/points/earn', async (req: AuthRequest, res: Response): Promise<voi
   const { customerId, amount, shopId } = req.body;
   
   const customer = customers.find(c => c.id === customerId);
+  const shop = shops.find(s => s.id === shopId);
   
   if (!customer) {
     res.status(400).json({ error: '客户不存在' });
@@ -179,6 +207,19 @@ router.post('/points/earn', async (req: AuthRequest, res: Response): Promise<voi
   const pointsEarned = Math.floor(amount / 10);
   customer.totalPoints += pointsEarned;
   customer.availablePoints += pointsEarned;
+  
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u5',
+    recipientName: '陈总',
+    type: 'points',
+    title: `积分累积通知 - ${customer.name}`,
+    content: `${customer.name}在${shop?.brandName || '店铺'}消费${amount}元，获得${pointsEarned}积分，当前可用积分：${customer.availablePoints}。`,
+    relatedId: customerId,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
   
   res.json({
     success: true,
@@ -370,10 +411,12 @@ router.post('/reports/auto-generate-monthly', async (req: AuthRequest, res: Resp
   
   const existingReport = reports.find(r => r.reportMonth === reportMonth);
   if (existingReport) {
+    const existingMessage = messages.find(m => m.relatedId === existingReport.id && m.type === 'report');
     res.json({
       success: true,
       message: `${reportMonth} 月运营报告已存在`,
       report: existingReport,
+      pushMessage: existingMessage || null,
     });
     return;
   }
@@ -434,7 +477,7 @@ router.post('/reports/auto-generate-monthly', async (req: AuthRequest, res: Resp
     success: true,
     message: `${reportMonth} 月运营报告已自动生成并推送给总经理`,
     report: newReport,
-    message: newMessage,
+    pushMessage: newMessage,
   });
 });
 

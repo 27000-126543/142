@@ -54,6 +54,18 @@ export function OperationReports() {
     }
   };
 
+  const handleAutoGenerateMonthly = async () => {
+    try {
+      setActionLoading('auto');
+      await api.autoGenerateMonthlyReport();
+      fetchData();
+    } catch (error) {
+      console.error('Failed to auto generate monthly report:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handlePushReport = async (reportId: string) => {
     try {
       setActionLoading(reportId);
@@ -161,6 +173,18 @@ export function OperationReports() {
           >
             <RefreshCw className="w-4 h-4" />
             刷新
+          </button>
+          <button
+            onClick={handleAutoGenerateMonthly}
+            disabled={actionLoading === 'auto'}
+            className="btn-gold !px-4 !py-2 flex items-center gap-2 !text-sm"
+          >
+            {actionLoading === 'auto' ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <Bell className="w-4 h-4" />
+            )}
+            模拟每月1号自动生成
           </button>
           <button
             onClick={handleGenerateReport}

@@ -449,6 +449,12 @@ class ApiService {
   async getSystemStats(): Promise<any> {
     return this.request<any>('/system/stats/overview');
   }
+
+  async autoGenerateMonthlyReport(): Promise<any> {
+    return this.request<any>('/system/reports/auto-generate-monthly', {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiService();

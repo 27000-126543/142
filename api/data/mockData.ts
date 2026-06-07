@@ -3,7 +3,7 @@ import {
   User, Brand, Floor, Zone, Shop, Application, Contract,
   Activity, RepairTicket, Worker, Customer, Gift, Message,
   RentBill, RentAdjustment, Report, SalesRank, PassengerDensity,
-  ExecutiveMetrics, ActivityParticipant
+  ExecutiveMetrics, ActivityParticipant, OperationReport
 } from '/shared/types';
 
 export const users: User[] = [
@@ -254,6 +254,7 @@ export const repairTickets: RepairTicket[] = [
   { id: 't6', shopId: 's7', shopName: 'H&M', faultType: '木工', description: '试衣间门锁损坏', priority: 'low', status: 'pending', workerId: null, workerName: null, rating: null, reviewComment: null, createdAt: '2024-06-05T11:00:00Z', assignedAt: null, completedAt: null, ratedAt: null },
   { id: 't7', shopId: 's15', shopName: '外婆家', faultType: '空调', description: '大堂中央空调制冷不足', priority: 'high', status: 'in_progress', workerId: 'w8', workerName: '吴师傅', rating: null, reviewComment: null, createdAt: '2024-06-05T07:30:00Z', assignedAt: '2024-06-05T07:45:00Z', completedAt: null, ratedAt: null },
   { id: 't8', shopId: 's10', shopName: '耐克', faultType: '消防', description: '烟感器报警', priority: 'urgent', status: 'completed', workerId: 'w7', workerName: '周师傅', rating: 5, reviewComment: '响应迅速，专业到位', createdAt: '2024-06-02T20:00:00Z', assignedAt: '2024-06-02T20:05:00Z', completedAt: '2024-06-02T20:30:00Z', ratedAt: '2024-06-02T21:00:00Z' },
+  { id: 't9', shopId: 's9', shopName: '小米之家', faultType: '水电', description: '店铺照明线路故障', priority: 'high', status: 'completed', workerId: 'w1', workerName: '张师傅', rating: null, reviewComment: null, createdAt: '2024-06-04T09:00:00Z', assignedAt: '2024-06-04T09:15:00Z', completedAt: '2024-06-04T11:30:00Z', ratedAt: null },
 ];
 
 export const customers: Customer[] = [
@@ -293,9 +294,49 @@ export const rentAdjustments: RentAdjustment[] = [
   { id: 'ra2', floor: 4, zone: '全部', coefficient: 0.95, effectiveDate: '2024-06-01', createdBy: 'u5', createdAt: '2024-05-15T14:00:00Z' },
 ];
 
-export const reports: Report[] = [
-  { id: 'r1', reportMonth: '2024-05', rentCollectionRate: 87.5, totalPassenger: 1250000, activityRoi: 3.2, content: '5月整体运营平稳，618预热活动效果显著。餐饮层客流增长明显，建议继续加强餐饮品牌招商。', pushed: true, createdAt: '2024-06-01T08:00:00Z' },
-  { id: 'r2', reportMonth: '2024-04', rentCollectionRate: 92.3, totalPassenger: 1180000, activityRoi: 2.8, content: '4月春季促销活动带动客流增长，零售业态表现良好。', pushed: true, createdAt: '2024-05-01T08:00:00Z' },
+export const reports: OperationReport[] = [
+  { 
+    id: 'r1', 
+    reportMonth: '2024-05', 
+    status: 'pushed', 
+    collectionRate: 87.5, 
+    totalPassengers: 1250000, 
+    passengerGrowth: 0.08, 
+    activityROI: 3.2, 
+    totalSales: 25800000, 
+    generatedAt: '2024-06-01T08:00:00Z', 
+    pushedAt: '2024-06-01T09:00:00Z', 
+    pushCount: 1,
+    floorBreakdown: [
+      { floorName: 'L1 精品零售', collectionRate: 95.2, passengers: 280000, sales: 6800000, efficiency: 3800, floor: 1 },
+      { floorName: 'L2 时尚服饰', collectionRate: 88.6, passengers: 250000, sales: 5200000, efficiency: 2900, floor: 2 },
+      { floorName: 'L3 生活家居', collectionRate: 85.3, passengers: 210000, sales: 4200000, efficiency: 2500, floor: 3 },
+      { floorName: 'L4 餐饮美食', collectionRate: 90.1, passengers: 320000, sales: 5800000, efficiency: 4200, floor: 4 },
+      { floorName: 'L5 休闲娱乐', collectionRate: 78.5, passengers: 120000, sales: 2500000, efficiency: 2100, floor: 5 },
+      { floorName: 'B1 生活超市', collectionRate: 82.4, passengers: 70000, sales: 1300000, efficiency: 1800, floor: -1 },
+    ]
+  },
+  { 
+    id: 'r2', 
+    reportMonth: '2024-04', 
+    status: 'pushed', 
+    collectionRate: 92.3, 
+    totalPassengers: 1180000, 
+    passengerGrowth: 0.05, 
+    activityROI: 2.8, 
+    totalSales: 23500000, 
+    generatedAt: '2024-05-01T08:00:00Z', 
+    pushedAt: '2024-05-01T09:00:00Z', 
+    pushCount: 1,
+    floorBreakdown: [
+      { floorName: 'L1 精品零售', collectionRate: 96.8, passengers: 265000, sales: 6200000, efficiency: 3600, floor: 1 },
+      { floorName: 'L2 时尚服饰', collectionRate: 93.2, passengers: 235000, sales: 4800000, efficiency: 2700, floor: 2 },
+      { floorName: 'L3 生活家居', collectionRate: 90.5, passengers: 195000, sales: 3800000, efficiency: 2300, floor: 3 },
+      { floorName: 'L4 餐饮美食', collectionRate: 92.1, passengers: 300000, sales: 5300000, efficiency: 4000, floor: 4 },
+      { floorName: 'L5 休闲娱乐', collectionRate: 85.6, passengers: 110000, sales: 2200000, efficiency: 1900, floor: 5 },
+      { floorName: 'B1 生活超市', collectionRate: 88.2, passengers: 75000, sales: 1200000, efficiency: 1700, floor: -1 },
+    ]
+  },
 ];
 
 export const passengerDensity: PassengerDensity[] = [

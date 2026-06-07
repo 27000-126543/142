@@ -80,6 +80,19 @@ router.post('/applications/:id/reject', async (req: AuthRequest, res: Response):
   application.reviewNote = reviewNote || '审核未通过';
   application.reviewedAt = new Date().toISOString();
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u1',
+    recipientName: '张经理',
+    type: 'application',
+    title: `入驻申请已拒绝 - ${application.brandName}`,
+    content: `${application.brandName}的入驻申请已被拒绝。审核意见：${reviewNote || '审核未通过'}。`,
+    relatedId: application.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   res.json(application);
 });
 
@@ -252,6 +265,19 @@ router.post('/contracts/:id/sign', async (req: AuthRequest, res: Response): Prom
     shop.brandId = application.brandId;
     shop.brandName = application.brandName;
   }
+  
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u1',
+    recipientName: '张经理',
+    type: 'contract',
+    title: `合同已签署 - ${contract.brandName}`,
+    content: `${contract.brandName}的电子合同已签署，租期${contract.contractTermMonths}个月，免租期${contract.rentFreeMonths}个月。`,
+    relatedId: contract.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
   
   res.json(contract);
 });

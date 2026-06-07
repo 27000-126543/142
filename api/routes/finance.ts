@@ -55,21 +55,34 @@ router.post('/bills/:id/pay', async (req: AuthRequest, res: Response): Promise<v
   bill.overdueDays = 0;
   bill.lateFee = 0;
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u3',
+    recipientName: '王会计',
+    type: 'rent',
+    title: `租金已缴纳 - ${bill.shopName}`,
+    content: `${bill.shopName}已缴清${bill.billMonth}月租金及滞纳金共计${bill.totalAmount + bill.lateFee}元。`,
+    relatedId: bill.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   if (bill.accessLocked) {
     bill.accessLocked = false;
     
-    const newMessage = {
+    const unlockMessage = {
       id: generateId(),
       recipientId: 'u3',
       recipientName: '王会计',
-      type: 'finance',
+      type: 'rent',
       title: `门禁已解锁 - ${bill.shopName}`,
       content: `${bill.shopName}已缴清租金及滞纳金，门禁已自动解锁。`,
       relatedId: bill.id,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    messages.push(newMessage);
+    messages.push(unlockMessage);
   }
   
   res.json(bill);

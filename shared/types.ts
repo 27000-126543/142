@@ -219,6 +219,7 @@ export interface OperationReport {
   pushedAt: string | null;
   pushCount: number;
   floorBreakdown: {
+    floor: number;
     floorName: string;
     collectionRate: number;
     passengers: number;

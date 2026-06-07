@@ -69,6 +69,19 @@ router.post('/activities', async (req: AuthRequest, res: Response): Promise<void
   
   activities.push(newActivity);
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u2',
+    recipientName: '李主管',
+    type: 'activity',
+    title: `新活动待审核 - ${name}`,
+    content: `${req.user!.name}创建了新活动"${name}"，预算${recommendedBudget}元，请审核。`,
+    relatedId: newActivity.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   res.status(201).json(newActivity);
 });
 
@@ -108,6 +121,19 @@ router.post('/activities/:id/start', async (req: AuthRequest, res: Response): Pr
   
   activity.status = 'active';
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u2',
+    recipientName: '李主管',
+    type: 'activity',
+    title: `活动已启动 - ${activity.name}`,
+    content: `${activity.name}活动已正式启动，请各参与品牌做好准备。`,
+    relatedId: activity.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   res.json(activity);
 });
 
@@ -120,6 +146,19 @@ router.post('/activities/:id/complete', async (req: AuthRequest, res: Response):
   }
   
   activity.status = 'completed';
+  
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u2',
+    recipientName: '李主管',
+    type: 'activity',
+    title: `活动已结束 - ${activity.name}`,
+    content: `${activity.name}活动已结束，系统将自动统计销售额增量排行。`,
+    relatedId: activity.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
   
   res.json(activity);
 });
