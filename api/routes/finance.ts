@@ -130,7 +130,44 @@ router.post('/bills/:id/unlock', async (req: AuthRequest, res: Response): Promis
     shop.status = 'occupied';
   }
   
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u3',
+    recipientName: '王会计',
+    type: 'rent',
+    title: `门禁已解锁 - ${bill.shopName}`,
+    content: `${bill.shopName}的门禁已解锁。`,
+    relatedId: bill.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
   res.json(bill);
+});
+
+router.post('/bills/:id/send-notice', async (req: AuthRequest, res: Response): Promise<void> => {
+  const bill = rentBills.find(b => b.id === req.params.id);
+  
+  if (!bill) {
+    res.status(404).json({ error: '账单不存在' });
+    return;
+  }
+  
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u3',
+    recipientName: '王会计',
+    type: 'rent',
+    title: `租金催缴通知 - ${bill.shopName}`,
+    content: `已向${bill.shopName}发送租金催缴通知，逾期${bill.overdueDays}天，应缴总额：${bill.totalAmount + bill.lateFee}元。`,
+    relatedId: bill.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
+  res.json({ success: true, message: '催缴通知已发送' });
 });
 
 router.post('/bills/:id/apply-late-fee', async (req: AuthRequest, res: Response): Promise<void> => {

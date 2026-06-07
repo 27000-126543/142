@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   Wrench, Clock, CheckCircle, AlertCircle, Star,
   Search, Filter, Download, Phone, MapPin, User,
-  Send, X, MessageSquare, ThumbsUp, ThumbsDown
+  Send, X, MessageSquare, ThumbsUp, ThumbsDown,
+  QrCode, ScanFace
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -48,6 +49,10 @@ export function WorkOrders() {
   const [selectedTicket, setSelectedTicket] = useState<WorkTicket | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [showDispatch, setShowDispatch] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -134,6 +139,35 @@ export function WorkOrders() {
   const openDetail = (ticket: WorkTicket) => {
     setSelectedTicket(ticket);
     setShowDetail(true);
+  };
+
+  const handleShowQRCode = (ticket: WorkTicket) => {
+    setSelectedTicket(ticket);
+    setShowQRCode(true);
+  };
+
+  const handleOpenRating = (ticket: WorkTicket) => {
+    setSelectedTicket(ticket);
+    setRatingValue(5);
+    setRatingComment('');
+    setShowRating(true);
+  };
+
+  const handleSubmitRating = async () => {
+    if (!selectedTicket) return;
+    try {
+      setActionLoading(selectedTicket.id);
+      await api.rateTicket(selectedTicket.id, ratingValue, ratingComment);
+      fetchData();
+      setShowRating(false);
+      setSelectedTicket(null);
+      setRatingValue(5);
+      setRatingComment('');
+    } catch (error) {
+      console.error('Failed to submit rating:', error);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const statusCounts = [
@@ -458,6 +492,24 @@ export function WorkOrders() {
                         联系工人
                       </button>
                     )}
+                    {ticket.status === 'completed' && !ticket.rating && (
+                      <>
+                        <button
+                          onClick={() => handleShowQRCode(ticket)}
+                          className="btn-secondary !px-4 !py-2 !text-sm flex items-center justify-center gap-2"
+                        >
+                          <QrCode className="w-4 h-4" />
+                          扫码确认
+                        </button>
+                        <button
+                          onClick={() => handleOpenRating(ticket)}
+                          className="btn-primary !px-4 !py-2 !text-sm flex items-center justify-center gap-2"
+                        >
+                          <Star className="w-4 h-4" />
+                          服务评价
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -677,10 +729,177 @@ export function WorkOrders() {
               >
                 关闭
               </button>
+              {selectedTicket?.status === 'completed' && !selectedTicket?.rating && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowDetail(false);
+                      handleShowQRCode(selectedTicket);
+                    }}
+                    className="btn-secondary !px-5 !py-2.5 flex items-center gap-2"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    扫码确认
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDetail(false);
+                      handleOpenRating(selectedTicket);
+                    }}
+                    className="btn-primary !px-5 !py-2.5 flex items-center gap-2"
+                  >
+                    <Star className="w-4 h-4" />
+                    服务评价
+                  </button>
+                </>
+              )}
               <button className="btn-secondary !px-5 !py-2.5 flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 下载凭证
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQRCode && selectedTicket && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <QrCode className="w-6 h-6 text-primary-600" />
+                  扫码确认完工
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">工单号：{selectedTicket.id}</p>
+              </div>
+              <button
+                onClick={() => setShowQRCode(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 text-center">
+              <div className="w-48 h-48 mx-auto bg-gray-100 rounded-xl flex items-center justify-center mb-6">
+                <div className="text-center">
+                  <QrCode className="w-24 h-24 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">模拟二维码</p>
+                </div>
+              </div>
+              <p className="text-gray-600 mb-4">请使用店铺管理员账号扫描二维码确认维修完工</p>
+              <div className="p-4 bg-blue-50 rounded-xl text-left mb-6">
+                <h4 className="font-semibold text-blue-800 mb-2">工单信息</h4>
+                <div className="space-y-1 text-sm text-blue-700">
+                  <p>店铺：{selectedTicket.shopName}</p>
+                  <p>故障类型：{faultTypeLabels[selectedTicket.faultType]}</p>
+                  <p>维修工：{workers.find(w => w.id === selectedTicket.workerId)?.name || '未分配'}</p>
+                  <p>完成时间：{selectedTicket.completedAt ? formatDate(selectedTicket.completedAt) : '未完成'}</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowQRCode(false)}
+                  className="flex-1 btn-secondary !py-2.5"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    setShowQRCode(false);
+                    handleOpenRating(selectedTicket);
+                  }}
+                  className="flex-1 btn-primary !py-2.5 flex items-center justify-center gap-2"
+                >
+                  <ScanFace className="w-4 h-4" />
+                  模拟扫码确认
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRating && selectedTicket && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <Star className="w-6 h-6 text-gold-500" />
+                  服务评价
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">请为本次维修服务打分</p>
+              </div>
+              <button
+                onClick={() => setShowRating(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <p className="text-gray-600 mb-4">{selectedTicket.shopName}</p>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRatingValue(star)}
+                      className="p-1 transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={cn(
+                          'w-10 h-10 transition-colors',
+                          star <= ratingValue
+                            ? 'text-gold-500 fill-gold-500'
+                            : 'text-gray-300 hover:text-gold-300'
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-lg font-bold text-gold-600">
+                  {ratingValue === 1 && '非常不满意'}
+                  {ratingValue === 2 && '不满意'}
+                  {ratingValue === 3 && '一般'}
+                  {ratingValue === 4 && '满意'}
+                  {ratingValue === 5 && '非常满意'}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  评价内容（选填）
+                </label>
+                <textarea
+                  value={ratingComment}
+                  onChange={(e) => setRatingComment(e.target.value)}
+                  placeholder="请描述您的服务体验..."
+                  className="input-field min-h-[100px]"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRating(false)}
+                  className="flex-1 btn-secondary !py-2.5"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmitRating}
+                  disabled={actionLoading === selectedTicket.id}
+                  className="flex-1 btn-primary !py-2.5 flex items-center justify-center gap-2"
+                >
+                  {actionLoading === selectedTicket.id ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  提交评价
+                </button>
+              </div>
             </div>
           </div>
         </div>

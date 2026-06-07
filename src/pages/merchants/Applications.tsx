@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
 import {
   Search, Filter, Eye, CheckCircle, XCircle, Clock,
-  Building2, Phone, MapPin, FileText, Send, X
+  Building2, Phone, MapPin, FileText, Send, X,
+  Sparkles, TrendingUp, Award, RefreshCw
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Application } from '/shared/types';
 import { cn } from '../../lib/utils';
+
+interface Recommendation {
+  floor: number;
+  floorName: string;
+  zone: string;
+  zoneId: string;
+  shopNumber: string;
+  shopId: string;
+  area: number;
+  requiredArea: number;
+  score: number;
+  reason: string;
+}
 
 const statusOptions = [
   { value: 'all', label: '全部' },
@@ -32,6 +46,8 @@ export function Applications() {
   const [showDetail, setShowDetail] = useState(false);
   const [reviewNote, setReviewNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -95,10 +111,25 @@ export function Applications() {
     }
   };
 
+  const fetchRecommendations = async (applicationId: string) => {
+    try {
+      setRecLoading(true);
+      const data = await api.getRecommendations(applicationId);
+      setRecommendations(data);
+    } catch (error) {
+      console.error('Failed to fetch recommendations:', error);
+      setRecommendations([]);
+    } finally {
+      setRecLoading(false);
+    }
+  };
+
   const openDetail = (app: Application) => {
     setSelectedApp(app);
     setShowDetail(true);
     setReviewNote('');
+    setRecommendations([]);
+    fetchRecommendations(app.id);
   };
 
   return (
@@ -332,6 +363,83 @@ export function Applications() {
                   )}
                 </div>
               )}
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-bold text-gray-800 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-gold-500" />
+                    AI智能铺位推荐
+                  </h4>
+                  <button
+                    onClick={() => fetchRecommendations(selectedApp.id)}
+                    disabled={recLoading}
+                    className="btn-secondary !px-3 !py-1.5 !text-xs flex items-center gap-1"
+                  >
+                    <RefreshCw className={cn('w-3 h-3', recLoading && 'animate-spin')} />
+                    重新计算
+                  </button>
+                </div>
+
+                {recLoading ? (
+                  <div className="space-y-3">
+                    {Array(3).fill(0).map((_, i) => (
+                      <div key={i} className="skeleton h-24 w-full rounded-lg"></div>
+                    ))}
+                  </div>
+                ) : recommendations.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-xl">
+                    <Building2 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-gray-500">暂无匹配的空置铺位</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recommendations.map((rec, index) => (
+                      <div
+                        key={rec.shopId}
+                        className={cn(
+                          'p-4 rounded-xl border-2 transition-all',
+                          index === 0
+                            ? 'border-gold-400 bg-gradient-to-r from-gold-50 to-yellow-50'
+                            : 'border-gray-200 bg-white hover:border-primary-300'
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              {index === 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gold-500 text-white text-xs font-bold rounded-full">
+                                  <Award className="w-3 h-3" />
+                                  最优推荐
+                                </span>
+                              )}
+                              <span className="font-bold text-gray-800">
+                                {rec.floorName} {rec.zone} {rec.shopNumber}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {rec.area}㎡ (需求 {rec.requiredArea}㎡)
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{rec.reason}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="flex items-center gap-1 mb-1">
+                              <TrendingUp className="w-4 h-4 text-gold-500" />
+                              <span className="text-2xl font-bold text-gold-600">{rec.score}</span>
+                              <span className="text-sm text-gray-400">分</span>
+                            </div>
+                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-primary-500 to-gold-500 rounded-full"
+                                style={{ width: `${Math.min(rec.score, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {selectedApp.status === 'pending' || selectedApp.status === 'reviewing' ? (
                 <div className="mt-6">

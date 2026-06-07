@@ -255,46 +255,235 @@ router.get('/reports/:id', async (req: AuthRequest, res: Response): Promise<void
 router.post('/reports/generate', async (req: AuthRequest, res: Response): Promise<void> => {
   const { month } = req.body;
   
-  const monthBills = reports[0];
+  const reportMonth = month || new Date().toISOString().slice(0, 7);
   
-  const details = {
-    rentCollection: {
-      target: 2500000,
-      actual: monthBills.rentCollectionRate / 100 * 2500000,
-      rate: monthBills.rentCollectionRate,
-      byFloor: [
-        { floor: 1, name: 'L1', collection: 95.2 },
-        { floor: 2, name: 'L2', collection: 88.6 },
-        { floor: 3, name: 'L3', collection: 85.3 },
-        { floor: 4, name: 'L4', collection: 90.1 },
-        { floor: 5, name: 'L5', collection: 78.5 },
-        { floor: -1, name: 'B1', collection: 82.4 },
-      ],
-    },
-    passengerFlow: {
-      total: monthBills.totalPassenger,
-      dailyAverage: Math.round(monthBills.totalPassenger / 30),
-      peakDay: '2024-05-01',
-      peakCount: 68000,
-      byFloor: [
-        { floor: 1, name: 'L1', count: 280000 },
-        { floor: 2, name: 'L2', count: 250000 },
-        { floor: 3, name: 'L3', count: 210000 },
-        { floor: 4, name: 'L4', count: 320000 },
-        { floor: 5, name: 'L5', count: 120000 },
-        { floor: -1, name: 'B1', count: 70000 },
-      ],
-    },
-    activityRoi: monthBills.activityRoi,
-    activities: [
-      { name: '五一黄金周促销', revenue: 12500000, cost: 3500000, roi: 3.57 },
-      { name: '母亲节特别活动', revenue: 5600000, cost: 1800000, roi: 3.11 },
-    ],
+  const existingReport = reports.find(r => r.reportMonth === reportMonth);
+  if (existingReport) {
+    res.json({
+      ...existingReport,
+      details: {
+        rentCollection: {
+          target: 2500000,
+          actual: existingReport.collectionRate / 100 * 2500000,
+          rate: existingReport.collectionRate,
+          byFloor: existingReport.floorBreakdown.map(f => ({
+            floor: f.floor,
+            name: f.floorName,
+            collection: f.collectionRate
+          })),
+        },
+        passengerFlow: {
+          total: existingReport.totalPassengers,
+          dailyAverage: Math.round(existingReport.totalPassengers / 30),
+          peakDay: `${reportMonth}-15`,
+          peakCount: Math.round(existingReport.totalPassengers / 30 * 1.5),
+          byFloor: existingReport.floorBreakdown.map(f => ({
+            floor: f.floor,
+            name: f.floorName,
+            count: f.passengers
+          })),
+        },
+        activityRoi: existingReport.activityROI,
+        activities: [
+          { name: '月度促销活动', revenue: 8500000, cost: 2500000, roi: existingReport.activityROI },
+        ],
+      },
+    });
+    return;
+  }
+  
+  const collectionRate = 85 + Math.random() * 15;
+  const totalPassengers = Math.floor(800000 + Math.random() * 500000);
+  const activityROI = 2.5 + Math.random() * 2;
+  const totalSales = Math.floor(15000000 + Math.random() * 10000000);
+  
+  const floors = [
+    { floor: 1, floorName: 'L1 精品零售' },
+    { floor: 2, floorName: 'L2 时尚服饰' },
+    { floor: 3, floorName: 'L3 生活家居' },
+    { floor: 4, floorName: 'L4 餐饮美食' },
+    { floor: 5, floorName: 'L5 休闲娱乐' },
+    { floor: -1, floorName: 'B1 生活超市' },
+  ];
+  
+  const floorBreakdown = floors.map(f => ({
+    ...f,
+    collectionRate: 80 + Math.random() * 20,
+    passengers: Math.floor(totalPassengers / 6 + Math.random() * 50000),
+    sales: Math.floor(totalSales / 6 + Math.random() * 1000000),
+    efficiency: Math.floor(3000 + Math.random() * 2000),
+  }));
+  
+  const newReport = {
+    id: generateId(),
+    reportMonth,
+    collectionRate,
+    totalPassengers,
+    passengerGrowth: 0.05 + Math.random() * 0.1,
+    activityROI,
+    totalSales,
+    status: 'generated' as const,
+    pushedAt: null,
+    pushCount: 0,
+    generatedAt: new Date().toISOString(),
+    floorBreakdown,
   };
   
+  reports.push(newReport);
+  
   res.json({
-    ...monthBills,
-    details,
+    ...newReport,
+    details: {
+      rentCollection: {
+        target: 2500000,
+        actual: collectionRate / 100 * 2500000,
+        rate: collectionRate,
+        byFloor: floorBreakdown.map(f => ({
+          floor: f.floor,
+          name: f.floorName,
+          collection: f.collectionRate
+        })),
+      },
+      passengerFlow: {
+        total: totalPassengers,
+        dailyAverage: Math.round(totalPassengers / 30),
+        peakDay: `${reportMonth}-15`,
+        peakCount: Math.round(totalPassengers / 30 * 1.5),
+        byFloor: floorBreakdown.map(f => ({
+          floor: f.floor,
+          name: f.floorName,
+          count: f.passengers
+        })),
+      },
+      activityRoi: activityROI,
+      activities: [
+        { name: '月度促销活动', revenue: 8500000, cost: 2500000, roi: activityROI },
+      ],
+    },
+  });
+});
+
+router.post('/reports/auto-generate-monthly', async (req: AuthRequest, res: Response): Promise<void> => {
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const reportMonth = lastMonth.toISOString().slice(0, 7);
+  
+  const existingReport = reports.find(r => r.reportMonth === reportMonth);
+  if (existingReport) {
+    res.json({
+      success: true,
+      message: `${reportMonth} 月运营报告已存在`,
+      report: existingReport,
+    });
+    return;
+  }
+  
+  const collectionRate = 85 + Math.random() * 15;
+  const totalPassengers = Math.floor(800000 + Math.random() * 500000);
+  const activityROI = 2.5 + Math.random() * 2;
+  const totalSales = Math.floor(15000000 + Math.random() * 10000000);
+  
+  const floors = [
+    { floor: 1, floorName: 'L1 精品零售' },
+    { floor: 2, floorName: 'L2 时尚服饰' },
+    { floor: 3, floorName: 'L3 生活家居' },
+    { floor: 4, floorName: 'L4 餐饮美食' },
+    { floor: 5, floorName: 'L5 休闲娱乐' },
+    { floor: -1, floorName: 'B1 生活超市' },
+  ];
+  
+  const floorBreakdown = floors.map(f => ({
+    ...f,
+    collectionRate: 80 + Math.random() * 20,
+    passengers: Math.floor(totalPassengers / 6 + Math.random() * 50000),
+    sales: Math.floor(totalSales / 6 + Math.random() * 1000000),
+    efficiency: Math.floor(3000 + Math.random() * 2000),
+  }));
+  
+  const newReport = {
+    id: generateId(),
+    reportMonth,
+    collectionRate,
+    totalPassengers,
+    passengerGrowth: 0.05 + Math.random() * 0.1,
+    activityROI,
+    totalSales,
+    status: 'generated' as const,
+    pushedAt: null,
+    pushCount: 0,
+    generatedAt: new Date().toISOString(),
+    floorBreakdown,
+  };
+  
+  reports.push(newReport);
+  
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u5',
+    recipientName: '陈总',
+    type: 'report',
+    title: `${reportMonth} 月运营报告已生成`,
+    content: `${reportMonth} 月运营报告已自动生成，收缴率：${collectionRate.toFixed(1)}%，客流总量：${totalPassengers.toLocaleString()}人次，活动ROI：1:${activityROI.toFixed(1)}。请查看详情。`,
+    relatedId: newReport.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
+  res.json({
+    success: true,
+    message: `${reportMonth} 月运营报告已自动生成并推送给总经理`,
+    report: newReport,
+    message: newMessage,
+  });
+});
+
+router.post('/reports/:id/push', async (req: AuthRequest, res: Response): Promise<void> => {
+  const report = reports.find(r => r.id === req.params.id);
+  
+  if (!report) {
+    res.status(404).json({ error: '报告不存在' });
+    return;
+  }
+  
+  report.status = 'pushed';
+  report.pushedAt = new Date().toISOString();
+  report.pushCount = (report.pushCount || 0) + 1;
+  
+  const newMessage = {
+    id: generateId(),
+    recipientId: 'u5',
+    recipientName: '陈总',
+    type: 'report',
+    title: `${report.reportMonth} 月运营报告`,
+    content: `${report.reportMonth} 月运营报告已推送至您的手机端。收缴率：${report.collectionRate.toFixed(1)}%，客流总量：${report.totalPassengers.toLocaleString()}人次。`,
+    relatedId: report.id,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  messages.push(newMessage);
+  
+  res.json({
+    success: true,
+    message: '报告已推送',
+    report,
+    pushMessage: newMessage,
+  });
+});
+
+router.post('/reports/:id/download', async (req: AuthRequest, res: Response): Promise<void> => {
+  const report = reports.find(r => r.id === req.params.id);
+  
+  if (!report) {
+    res.status(404).json({ error: '报告不存在' });
+    return;
+  }
+  
+  res.json({
+    success: true,
+    message: '报告下载凭证已生成',
+    downloadUrl: `/api/reports/${report.id}/pdf`,
+    report,
   });
 });
 
